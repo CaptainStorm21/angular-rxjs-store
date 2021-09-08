@@ -1,5 +1,5 @@
 import {Component, OnInit, ViewEncapsulation} from '@angular/core';
-import {concat, fromEvent, interval, noop, observable, Observable, of, timer, merge, Subject} from 'rxjs';
+import {concat, fromEvent, interval, noop, observable, Observable, of, timer, merge, Subject, BehaviorSubject} from 'rxjs';
 import {delayWhen, filter, map, take, timeout} from 'rxjs/operators';
 import {createHttpObservable} from '../common/util';
 
@@ -22,7 +22,7 @@ export class AboutComponent implements OnInit {
        * subject that we are going to instantiate.
        */
 
-      const subject = new Subject();
+      // const subject = new Subject();
 
       /**
        * We can directly emit values with it, but we can also combine
@@ -39,14 +39,14 @@ export class AboutComponent implements OnInit {
        * It would not be a very good idea to share this observer outside
        * of this method.
        */
-      const series$ = subject.asObservable();
+      // const series$ = subject.asObservable();
 
-      series$.subscribe(console.log);
+      // series$.subscribe(console.log);
 
-      subject.next(1);
-      subject.next(2);
-      subject.next(3);
-      subject.complete();
+      // subject.next(1);
+      // subject.next(2);
+      // subject.next(3);
+      // subject.complete();
 
       /**
        * We don't have any way of providing unsubscribe logic to our
@@ -81,6 +81,97 @@ export class AboutComponent implements OnInit {
        * output streams. As we will see, the notion of subject is going
        * to be essential for us to implement our own custom store solution.
        */
+
+      /**
+       * As we have discussed, we should only use a subject to create
+       * our own observable if some of the available observable creation
+       * methods that are access provides us such as the from method is not
+       * a convenient solution for creating a given stream.
+       */
+
+      /**
+       * However, in the rare occasions where we will be moving a subject we will
+       * probably not be using here the default plain subject, we will most
+       * likely, instead of using behavior subject, which is very similar to
+       * the plain subject, but it also supports late subscriptions.
+       * Let's give an example of a late subscription. So we are defining
+       * here a subject and we are deriving from it and observable just like
+       * before.
+       */
+
+      // const subject = new Subject();
+      // const series$ = subject.asObservable();
+      // series$.subscribe(val => console.log("as early subject " + val));
+
+      // subject.next(1);
+      // subject.next(2);
+      // subject.next(3);
+
+      // do not use ---> subject.complete();
+
+      // setTimeout(() => {
+      //   series$.subscribe(val => console.log("as late subject " + val));
+      //   subject.next(4);
+      // }, 3000);
+
+      /**
+       * But then we will have both the early and the late subscriber
+       * receiving the value for this is because the value for was emitted
+       * after both subscriptions took place.
+       * The problem is that when we are writing asynchronous programs,
+       * we very often want our lead subscribers to receive something
+       * from the observable. Typically, we want our late subscribers to
+       * receive the latest value emitted by the observable
+       *
+       * Let's say, for example, that the observable corresponds to
+       * an HTTP request. And we have here a late subscriber to that
+       * HTTP request.
+       * Even though the subscription happened after the request
+       * has been completed and we got the response from
+       * the backend, we would still want to receive that value.
+       * We want to be able to write our program in a way that our logic
+       * still works independently of the timing of each subscription.
+       * So in order to support that, we have a different type of subject,
+       * which is called the behavior subject.
+       * The goal of behavior subject is to always provide something to
+       * subscribers. Even if the subscription happens late, we still
+       * want to get the latest volume emitted by the observable
+       * before the subscription.
+       */
+
+      const subject = new BehaviorSubject(0);
+      const series$ = subject.asObservable();
+      series$.subscribe(val => console.log("early subject " + val));
+
+      subject.next(1);
+      subject.next(2);
+      subject.next(3);
+
+      subject.complete();
+      
+     /**
+      * do no use subject.complete() if you want setTimeout() to execute
+      *
+      * Now let's learn how behavior subject handles completion.
+      * So if the completion happens here before the second subscription
+      * takes place, then these late subscriber here will not receive any value.
+      * So as you can see, only the early subscriber received here the
+      * values zero, one, two and three.
+      * And our subject then completive completion means that late subscribers
+      * will no longer receive the last emitted value
+      * So these logic that the behavior subject has of remembering the last
+      * emitted value will only be effective
+      * as long as the observable is running and it will not work after completion.
+      * Behavior subject is probably the most commonly used type of subject,
+      * and it's the one that we will be using to implement our store.
+      * */
+
+      setTimeout(() => {
+        series$.subscribe(val => console.log("late subject " + val));
+        subject.next(4);
+      }, 3000);
+
+
     }
 
 
