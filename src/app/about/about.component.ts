@@ -1,5 +1,5 @@
 import {Component, OnInit, ViewEncapsulation} from '@angular/core';
-import {concat, fromEvent, interval, noop, observable, Observable, of, timer, merge, Subject, BehaviorSubject} from 'rxjs';
+import {concat, fromEvent, interval, noop, observable, Observable, of, timer, merge, Subject, BehaviorSubject, AsyncSubject, ReplaySubject} from 'rxjs';
 import {delayWhen, filter, map, take, timeout} from 'rxjs/operators';
 import {createHttpObservable} from '../common/util';
 
@@ -11,171 +11,109 @@ import {createHttpObservable} from '../common/util';
 })
 export class AboutComponent implements OnInit {
 
-    ngOnInit() {
+  ngOnInit() {
+
+    /**
+     * In this lesson, we're going to talk about two new types of subjects.
+     *  async subjects and replace subjects.
+     * The async subject is a deal for using with long running calculations
+     * where we have here and observable that is emitting here a lot of
+     * intermediate calculation values.
 
 
-      /**
-       * And in those situations we can resort to the use of a subject
-       * as subject is at the same time an observer and an observable
-       * Let's create a new subject. We are going to define here a
-       * variable called subject and we are going to assign it a new
-       * subject that we are going to instantiate.
-       */
+Let's say that the calculation is ongoing and we are progressively reporting here the latest most up
 
-      // const subject = new Subject();
+to date value of that calculation.
 
-      /**
-       * We can directly emit values with it, but we can also combine
-       * it with other observables, although we could use a subject
-       * here as a public member variable, for example, of this component
-       * and share it directly with other components of the application.
-       * That is usually not a good idea.
-       * The subject is meant to be private to the part of the application
-       * that is emitting a given set of data, the same way that here
-       * in our HTTP observable, we wouldn't want other parts of the
-       * program to get access here to this observer.
-       * Only this part of the program can emit errors,
-       * complete the observable or emit the backend response.
-       * It would not be a very good idea to share this observer outside
-       * of this method.
-       */
+But the calculation has not finished yet.
+
+When the calculation is finished, then the less the value of the subject is going to be emitted and
+
+then the subject is going to be completed in this scenario.
+
+We really don't want to receive the intermediate values of the calculation.
+
+Instead, what we would like to receive is the last value that got emitted just before completion.
+
+So that's the final value of the calculation.
+
+In order to implement that use case, we can use the async subject from our SJS async subject will wait
+
+for observable completion before emitting any of the values to the multiple subscribers.
+
+The value emitted is going to be the last value.
+     */
+
+      // const subject = new BehaviorSubject(0);
       // const series$ = subject.asObservable();
-
-      // series$.subscribe(console.log);
+      // series$.subscribe(val => console.log("early subject " + val));
 
       // subject.next(1);
       // subject.next(2);
       // subject.next(3);
+
       // subject.complete();
 
-      /**
-       * We don't have any way of providing unsubscribe logic to our
-       * observable that gets derived here from this subject.
-       *
-       * And we also run the risk of sharing accidentally the subject
-       * with other parts of the application, which means that those
-       * other parts of the application could potentially take over the
-       * behavior of the observable by directly calling the next complete
-       * or error on the subject, which is not intended by this reason,
-       */
-
-      /**
-       * we should try to use subjects as little as possible.
-       * Instead, we should try to derive our observables directly
-       * from the source as much as possible, using methods such as,
-       * for example, from promise to derive an observable from a promise
-       * or simply the from method that allows us to derive an observable
-       * directly from a browser event, for example.
-       *  So these are the preferred ways for creating our own observable
-       * by using these arrogates utility methods.
-       *
-       * from(document, 'keyup')
-       */
-
-      /**
-       * However, if by some reason that is not practical or even possible,
-       * then using a subject is a great way of creating a custom observable
-       * notice that another very common use case for our subjects is a
-       * multicasting. In the case of multicasting, we want to take one value
-       * from one observable stream and remit that into multiple separate
-       * output streams. As we will see, the notion of subject is going
-       * to be essential for us to implement our own custom store solution.
-       */
-
-      /**
-       * As we have discussed, we should only use a subject to create
-       * our own observable if some of the available observable creation
-       * methods that are access provides us such as the from method is not
-       * a convenient solution for creating a given stream.
-       */
-
-      /**
-       * However, in the rare occasions where we will be moving a subject we will
-       * probably not be using here the default plain subject, we will most
-       * likely, instead of using behavior subject, which is very similar to
-       * the plain subject, but it also supports late subscriptions.
-       * Let's give an example of a late subscription. So we are defining
-       * here a subject and we are deriving from it and observable just like
-       * before.
-       */
-
-      // const subject = new Subject();
-      // const series$ = subject.asObservable();
-      // series$.subscribe(val => console.log("as early subject " + val));
-
-      // subject.next(1);
-      // subject.next(2);
-      // subject.next(3);
-
-      // do not use ---> subject.complete();
-
-      // setTimeout(() => {
-      //   series$.subscribe(val => console.log("as late subject " + val));
-      //   subject.next(4);
-      // }, 3000);
-
-      /**
-       * But then we will have both the early and the late subscriber
-       * receiving the value for this is because the value for was emitted
-       * after both subscriptions took place.
-       * The problem is that when we are writing asynchronous programs,
-       * we very often want our lead subscribers to receive something
-       * from the observable. Typically, we want our late subscribers to
-       * receive the latest value emitted by the observable
-       *
-       * Let's say, for example, that the observable corresponds to
-       * an HTTP request. And we have here a late subscriber to that
-       * HTTP request.
-       * Even though the subscription happened after the request
-       * has been completed and we got the response from
-       * the backend, we would still want to receive that value.
-       * We want to be able to write our program in a way that our logic
-       * still works independently of the timing of each subscription.
-       * So in order to support that, we have a different type of subject,
-       * which is called the behavior subject.
-       * The goal of behavior subject is to always provide something to
-       * subscribers. Even if the subscription happens late, we still
-       * want to get the latest volume emitted by the observable
-       * before the subscription.
-       */
-
-      const subject = new BehaviorSubject(0);
+      const subject = new AsyncSubject();
       const series$ = subject.asObservable();
       series$.subscribe(val => console.log("early subject " + val));
 
       subject.next(1);
       subject.next(2);
       subject.next(3);
+    subject.complete();
 
-      subject.complete();
-      
-     /**
-      * do no use subject.complete() if you want setTimeout() to execute
-      *
-      * Now let's learn how behavior subject handles completion.
-      * So if the completion happens here before the second subscription
-      * takes place, then these late subscriber here will not receive any value.
-      * So as you can see, only the early subscriber received here the
-      * values zero, one, two and three.
-      * And our subject then completive completion means that late subscribers
-      * will no longer receive the last emitted value
-      * So these logic that the behavior subject has of remembering the last
-      * emitted value will only be effective
-      * as long as the observable is running and it will not work after completion.
-      * Behavior subject is probably the most commonly used type of subject,
-      * and it's the one that we will be using to implement our store.
-      * */
+    // subject.complete();
+    // And notice that if we comment out here the
+    // completion of the subject, we are going to see that no value
+    // So completion is essential before emitting
+    // the final result of the long running calculation.
 
-      setTimeout(() => {
-        series$.subscribe(val => console.log("late subject " + val));
-        subject.next(4);
-      }, 3000);
+    setTimeout(() => {
+      series1$.subscribe(val => console.log("second subscrber " + val));
+    }, 3000);
+    /**
+     * output is first sub: 3, second sub: 3
+     */
+
+  /**
+   * REPLAY SUBJECt
+   */
+
+   const subject1 = new ReplaySubject();
+   const series1$ = subject1.asObservable();
+   series1$.subscribe(val => console.log("ReplaySubject early subject " + val));
+
+   subject1.next(100);
+   subject1.next(200);
+   subject1.next(300);
+  //  subject.complete();
 
 
-    }
+  setTimeout(() => {
+    series1$.subscribe(val => console.log("ReplaySubject subscrber " + val));
+    subject1.next(400);
+  }, 3000);
+
+      }
+
+  /**
+   * So in order to enable that, we can use instead of the Asyncsubject,
+   * the replay subject, the replaced subject, like the name suggests,
+   * is going to replay the complete observable to all lead subscribers
+   * and notice that this logic is not linked to observable completion.
+   * So we don't have to wait for the Observer to complete four late
+   * subscribers to have all the values replayed the back to them after
+   * the second subscription if a new value gets submitted.
+   * Let's say that we emit here volume number four.
+   * Then this value is going to be broadcasted to both subscribers,
+   * just like the case of a normal subject.
+   * So as you can see, after the emission of volume number for the
+   * first subscriber and the second subscriber received this new value.
+   */
 
 
-}
+  }
 
 
 
