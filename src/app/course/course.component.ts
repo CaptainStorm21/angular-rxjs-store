@@ -30,7 +30,6 @@ export class CourseComponent implements OnInit, AfterViewInit {
     courseId:number;
 
     course$ : Observable<Course>;
-
     lessons$: Observable<Lesson[]>;
 
 
@@ -40,7 +39,8 @@ export class CourseComponent implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private store: Store){}
 
-    ngOnInit() {
+  ngOnInit() {
+
       this.courseId = this.route.snapshot.params['id'];
       this.course$ = this.store.selectCourseById(this.courseId)
         .pipe(
@@ -48,6 +48,15 @@ export class CourseComponent implements OnInit, AfterViewInit {
           //if we want to take onnly 1st value use take()
           take(1)
       );
+
+    this.loadLessons()
+      .pipe(
+        withLatestFrom(this.course$)
+      )
+      .subscribe(([lessons, course])=> {
+        console.log("lessons", lessons);
+        console.log("course", course);
+      });
 
       forkJoin(this.course$, this.loadLessons())
         .subscribe(console.log)
