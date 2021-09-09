@@ -11,7 +11,7 @@ import {
     concatMap,
     switchMap,
     withLatestFrom,
-    concatAll, shareReplay, first
+    concatAll, shareReplay, first, take
 } from 'rxjs/operators';
 import {merge, fromEvent, Observable, concat, forkJoin} from 'rxjs';
 import {Lesson} from '../model/lesson';
@@ -44,7 +44,9 @@ export class CourseComponent implements OnInit, AfterViewInit {
       this.courseId = this.route.snapshot.params['id'];
       this.course$ = this.store.selectCourseById(this.courseId)
         .pipe(
-          first()
+          // you can use this  --- first()
+          //if we want to take onnly 1st value use take()
+          take(1)
       );
 
       forkJoin(this.course$, this.loadLessons())
